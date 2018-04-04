@@ -1,6 +1,7 @@
 // @flow
 const debug = require('debug')('athena:queue:track-user-thread-last-seen');
 import Raven from 'shared/raven';
+import type { DBUsersThreads } from 'shared/types';
 import {
   getUsersThread,
   setUserThreadLastSeen,
@@ -26,14 +27,12 @@ export default async (job: Job<UserThreadLastSeenJobData>) => {
     ).toString()}`
   );
 
-  const record = await getUsersThread(userId, threadId);
+  const record: ?DBUsersThreads = await getUsersThread(userId, threadId);
 
   if (record) {
     if (record.lastSeen > date) {
       debug(
-        `old lastSeen ${
-          record.lastSeen
-        } is later than new lastSeen ${date.toString()}, not running job:\nuserId: ${userId}\nthreadId: ${threadId}\ntimestamp: ${new Date(
+        `old lastSeen ${record.lastSeen.toString()} is later than new lastSeen ${date.toString()}, not running job:\nuserId: ${userId}\nthreadId: ${threadId}\ntimestamp: ${new Date(
           timestamp
         ).toString()}`
       );
