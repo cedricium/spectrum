@@ -1,5 +1,4 @@
 // @flow
-const debug = require('debug')('api:models:utils');
 import { db } from './db';
 
 export const NEW_DOCUMENTS = db
@@ -67,25 +66,28 @@ export const getGrowth = async (
   filter: ?mixed
 ) => {
   const { current, previous } = parseRange(range);
-  const currentPeriodCount = await db
-    .table(table)
-    .filter(db.row(field).during(db.now().sub(current), db.now()))
-    .filter(filter ? filter : '')
-    .count()
-    .run();
 
-  const prevPeriodCount = await db
-    .table(table)
-    .filter(db.row(field).during(db.now().sub(previous), db.now().sub(current)))
-    .filter(filter ? filter : '')
-    .count()
-    .run();
-
-  const rate = (await (currentPeriodCount - prevPeriodCount)) / prevPeriodCount;
+  const [currentPeriodCount, previousPeriodCount] = await Promise.all([
+    db
+      .table(table)
+      .filter(db.row(field).during(db.now().sub(current), db.now()))
+      .filter(filter ? filter : '')
+      .count()
+      .run(),
+    db
+      .table(table)
+      .filter(
+        db.row(field).during(db.now().sub(previous), db.now().sub(current))
+      )
+      .filter(filter ? filter : '')
+      .count()
+      .run(),
+  ]);
+  const rate = (currentPeriodCount - previousPeriodCount) / previousPeriodCount;
   return {
     currentPeriodCount,
-    prevPeriodCount,
-    growth: Math.round(rate * 100),
+    previousPeriodCount,
+    growthRate: Math.round(rate * 100),
   };
 };
 
@@ -104,9 +106,70 @@ export const getCount = (table: string, filter: mixed) => {
     .run();
 };
 
-export const getCoreMetrics = () => {
+export const getCoreMetrics = (timeframe: number) => {
   return db
     .table('coreMetrics')
+    .orderBy(db.desc('date'))
+    .limit(timeframe)
     .orderBy('date')
+    .run();
+};
+
+export const getActiveThreads = (range: number) => {
+  return db
+    .table('threads')
+    .filter(db.row('lastActive').during(db.now().sub(range), db.now()))
+    .filter(thread => db.not(thread.hasFields('deletedAt')))
+    .group('communityId')
+    .ungroup()
+    .run();
+};
+
+const getCommunitiesWithMinimumMembers = (
+  min: number = 2,
+  communityIds: Array<string>
+) => {
+  return db
+    .table('usersCommunities')
+    .getAll(...communityIds, { index: 'communityId' })
+    .group('communityId')
+    .ungroup()
+    .filter(row =>
+      row('reduction')
+        .count()
+        .gt(min)
+    )
+    .map(row => row('group'))
+    .run();
+};
+
+export const getAc = async (range: Timeframe) => {
+  // constants
+  const { current } = parseRange(range);
+  const MIN_THREAD_COUNT = 1;
+
+  // get threads posted in the range
+  const threadsPostedInRange = await getActiveThreads(current);
+  // returns an array of community ids
+  const activeCommunitiesByThreads = threadsPostedInRange
+    .filter(t => t.reduction.length > MIN_THREAD_COUNT)
+    .map(t => t.group);
+
+  // for each active community by thread count, only return communities with at least 2 members
+  const activeCommunitiesByMember = await getCommunitiesWithMinimumMembers(
+    2,
+    activeCommunitiesByThreads
+  );
+
+  return activeCommunitiesByMember.length;
+};
+
+export const getAt = (range: Timeframe) => {
+  const { current } = parseRange(range);
+  return db
+    .table('threads')
+    .filter(db.row('lastActive').during(db.now().sub(current), db.now()))
+    .count()
+    .default(0)
     .run();
 };
