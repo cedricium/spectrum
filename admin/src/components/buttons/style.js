@@ -86,6 +86,7 @@ export const StyledTextButton = styled(StyledSolidButton)`
   background: transparent;
   background-image: none;
   font-weight: 600;
+  width: ${props => (props.block ? '100%' : 'auto')};
   color: ${props =>
     props.disabled
       ? props.theme.inactive
@@ -106,10 +107,11 @@ export const StyledTextButton = styled(StyledSolidButton)`
 `;
 
 export const StyledOutlineButton = styled(StyledTextButton)`
-  box-shadow: inset 0 0 0 2px ${props =>
-    props.disabled
-      ? props.theme.inactive
-      : eval(`props.theme.${props.color ? props.color : 'brand.default'}`)};
+  box-shadow: inset 0 0 0 2px
+    ${props =>
+      props.disabled
+        ? props.theme.inactive
+        : eval(`props.theme.${props.color ? props.color : 'brand.default'}`)};
   color: ${props =>
     props.disabled
       ? props.theme.inactive
@@ -124,19 +126,19 @@ export const StyledOutlineButton = styled(StyledTextButton)`
         : eval(
             `props.theme.${props.hoverColor ? props.hoverColor : 'brand.alt'}`
           )};
-    box-shadow: inset 0 0 0 2px ${props =>
-      props.disabled
-        ? props.theme.inactive
-        : eval(
-            `props.theme.${props.hoverColor ? props.hoverColor : 'brand.alt'}`
-          )};
+    box-shadow: inset 0 0 0 2px
+      ${props =>
+        props.disabled
+          ? props.theme.inactive
+          : eval(
+              `props.theme.${props.hoverColor ? props.hoverColor : 'brand.alt'}`
+            )};
     transition: ${Transition.hover.on};
   }
 `;
 
 export const StyledIconButton = styled.button`
-  ${baseButton}
-  padding: 0;
+  ${baseButton} padding: 0;
   width: 32px;
   height: 32px;
   background-color: transparent;
