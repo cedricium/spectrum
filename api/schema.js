@@ -27,6 +27,7 @@ const User = require('./types/User');
 const DirectMessageThread = require('./types/DirectMessageThread');
 const Notification = require('./types/Notification');
 const Meta = require('./types/Meta');
+const Admin = require('./types/Admin');
 const Invoice = require('./types/Invoice');
 const Search = require('./types/Search');
 const CommunityMember = require('./types/CommunityMember');
@@ -41,6 +42,7 @@ const reactionQueries = require('./queries/reaction');
 const directMessageThreadQueries = require('./queries/directMessageThread');
 const notificationQueries = require('./queries/notification');
 const metaQueries = require('./queries/meta');
+const adminQueries = require('./queries/admin');
 const searchQueries = require('./queries/search');
 const communityMemberQueries = require('./queries/communityMember');
 
@@ -54,6 +56,7 @@ const directMessageThreadMutations = require('./mutations/directMessageThread');
 const notificationMutations = require('./mutations/notification');
 const userMutations = require('./mutations/user');
 const metaMutations = require('./mutations/meta');
+const adminMutations = require('./mutations/admin');
 const communityMemberMutations = require('./mutations/communityMember');
 
 const messageSubscriptions = require('./subscriptions/message');
@@ -98,6 +101,7 @@ const resolvers = merge(
   reactionQueries,
   notificationQueries,
   metaQueries,
+  adminQueries,
   searchQueries,
   communityMemberQueries,
   // mutations
@@ -111,6 +115,7 @@ const resolvers = merge(
   notificationMutations,
   userMutations,
   metaMutations,
+  adminMutations,
   communityMemberMutations,
   // subscriptions
   messageSubscriptions,
@@ -141,6 +146,7 @@ const schema = makeExecutableSchema({
     DirectMessageThread,
     Notification,
     Meta,
+    Admin,
     Invoice,
     Search,
   ],
