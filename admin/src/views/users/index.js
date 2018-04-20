@@ -1,39 +1,38 @@
-import React, { Component } from 'react';
-// $FlowFixMe
-import compose from 'recompose/compose';
-// $FlowFixMe
-import pure from 'recompose/pure';
-import { View } from './style';
-import { usersQuery } from '../../api/queries';
-import { displayLoadingState } from '../../components/loading';
-import Chart from '../../components/spark-line';
-import getGrowthPerDay from '../../utils/get-growth-per-day';
-// import Search from './components/search';
-import UserContainer from './containers/user';
+// @flow
+import * as React from 'react';
+import { Card, CardTitle } from '../../components/card';
+import { Grid } from './style';
+// import Onboarding from './components/onboarding'
+// import Overview from './components/overview'
+// import ActiveUsers from './components/activeUsers'
+import Activity from './components/activity';
 
-class UsersViewIndex extends Component {
+class Users extends React.Component<{}> {
   render() {
-    const { data: { error, meta }, match } = this.props;
-    if (!meta || error) {
-      return <div />;
-    }
-
-    const userGrowth = getGrowthPerDay(meta.userGrowth);
-
-    if (match.params.username) {
-      return (
-        <View>
-          <UserContainer username={match.params.username} />
-        </View>
-      );
-    } else {
-      return (
-        <View>
-          <Chart height={128} data={userGrowth} />
-        </View>
-      );
-    }
+    return (
+      <Grid>
+        <Card>
+          <CardTitle title={'Activity'} />
+          <Activity />
+        </Card>
+      </Grid>
+    );
   }
 }
 
-export default compose(usersQuery, displayLoadingState, pure)(UsersViewIndex);
+export default Users;
+
+// <Card>
+//           <CardTitle title={'Overview'} />
+//           <Overview />
+//         </Card>
+
+//         <Card>
+//           <CardTitle title={'Onboarding'} />
+//           <Onboarding />
+//         </Card>
+
+//         <Card>
+//           <CardTitle title={'Active users'} />
+//           <ActiveUsers />
+//         </Card>
