@@ -1,3 +1,4 @@
+// @flow
 import { combineReducers } from 'redux';
 import users from './users';
 import composer from './composer';
@@ -11,9 +12,10 @@ import dashboardFeed from './dashboardFeed';
 import threadSlider from './threadSlider';
 import notifications from './notifications';
 import connectionStatus from './connectionStatus';
+import type { Reducer } from 'redux';
 
 // Allow dependency injection of extra reducers, we need this for SSR
-const getReducers = extraReducers => {
+const getReducers = (extraReducers: { [key: string]: Reducer<*, *> }) => {
   return combineReducers({
     users,
     modals,
