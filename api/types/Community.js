@@ -55,6 +55,22 @@ const Community = /* GraphQL */ `
 		newThreads: [Thread]
 	}
 
+	enum StripePlanType {
+		v3LegacyFreeCommunity
+		v3BasicCommunity
+		v3ProCommunity
+		v3BusinessCommunity
+	}
+
+	enum StripeSubscriptionStatus {
+		active
+		canceled
+		trialing
+		past_due
+		canceled
+		unpaid
+	}
+
 	type StripeCard {
 		brand: String
 		exp_month: Int
@@ -72,14 +88,14 @@ const Community = /* GraphQL */ `
 		id: ID
 		amount: Int
 		quantity: Int
-		planId: String
-		planName: String
+		planId: StripePlanType
+		planName: StripePlanType
 	}
 
 	type StripeSubscriptionItem {
 		created: Int
-		planId: String
-		planName: String
+		planId: StripePlanType
+		planName: StripePlanType
 		amount: Int
 		quantity: Int
 		id: String
@@ -99,7 +115,7 @@ const Community = /* GraphQL */ `
 		current_period_end: Int
 		canceled_at: Int
 		items: [StripeSubscriptionItem]
-		status: String
+		status: StripeSubscriptionStatus
 	}
 
 	type StripeInvoice {
@@ -114,7 +130,7 @@ const Community = /* GraphQL */ `
 		administratorEmail: LowercaseString
 		sources: [StripeSource]
 		invoices: [StripeInvoice]
-		subscriptions: [StripeSubscription]
+		subscriptions: [StripeSubscription] @deprecated(reason: "Deprecated with payments v3")
 	}
 
 	type Features {
@@ -146,8 +162,6 @@ const Community = /* GraphQL */ `
     threadConnection(first: Int = 10, after: String): CommunityThreadsConnection @cost(complexity: 2, multiplier: "first")
     metaData: CommunityMetaData @cost(complexity: 10)
     invoices: [Invoice] @cost(complexity: 1)
-		recurringPayments: [RecurringPayment]
-    isPro: Boolean @cost(complexity: 1)
     memberGrowth: GrowthData @cost(complexity: 10)
     conversationGrowth: GrowthData @cost(complexity: 3)
     topMembers: [CommunityMember] @cost(complexity: 10)
@@ -156,11 +170,13 @@ const Community = /* GraphQL */ `
 		brandedLogin: BrandedLogin
 		joinSettings: JoinSettings
 		slackSettings: CommunitySlackSettings @cost(complexity: 2)
-
-		hasFeatures: Features
-		hasChargeableSource: Boolean
 		billingSettings: CommunityBillingSettings
 
+		# Deprecated fields
+		isPro: Boolean @cost(complexity: 1) @deprecated(reason: "Use plan and plan status in billingSettings to determine what features the community can use")
+		recurringPayments: [RecurringPayment] @deprecated(reason: "Use plan and plan status in billingSettings to determine what features the community can use")
+		hasChargeableSource: Boolean @deprecated(reason: "Deprecated with payments v3")
+		hasFeatures: Features @deprecated(reason: "Use plan and plan status in billingSettings to determine what features the community can use")
 		slackImport: SlackImport @cost(complexity: 2) @deprecated(reason: "Use slack settings field instead")
 		memberConnection(first: Int = 10, after: String, filter: MemberConnectionFilter): CommunityMembersConnection! @deprecated(reason:"Use the new Community.members type")
 		contextPermissions: ContextPermissions @deprecated(reason:"Use the new CommunityMember type to get permissions")
@@ -201,6 +217,8 @@ const Community = /* GraphQL */ `
 		file: Upload
 		coverFile: Upload
 		isPrivate: Boolean
+		plan: StripePlanType!
+		sourceId: String!
 	}
 
 	input EditCommunityInput {
