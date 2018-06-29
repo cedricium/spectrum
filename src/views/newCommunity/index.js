@@ -6,7 +6,6 @@ import { withApollo } from 'react-apollo';
 import queryString from 'query-string';
 import { Button, TextButton } from '../../components/buttons';
 import AppViewWrapper from '../../components/appViewWrapper';
-import Column from '../../components/column';
 import { Loading } from '../../components/loading';
 import SlackConnection from '../communitySettings/components/slack';
 import { CommunityInvitationForm } from '../../components/emailInvitationForm';
@@ -115,7 +114,7 @@ class NewCommunity extends React.Component<Props, State> {
     const { activeStep, community } = this.state;
     switch (activeStep) {
       case 1: {
-        return community ? 'Update your community' : 'Create a community';
+        return community ? 'Update your community' : 'Create your community';
       }
       case 2: {
         return `Invite people${
@@ -137,7 +136,7 @@ class NewCommunity extends React.Component<Props, State> {
     const { activeStep, community } = this.state;
     switch (activeStep) {
       case 1: {
-        return 'Creating a community on Spectrum is free, forever. To get started, tell us more about your community below.';
+        return 'To get started, tell us more about your community. You can easily customize how you want your community to be discovered, and what features your community will use.';
       }
       case 2: {
         return `Kickstart ${
@@ -155,7 +154,7 @@ class NewCommunity extends React.Component<Props, State> {
 
   communityCreated = community => {
     this.setState({
-      community: { ...community },
+      community,
     });
     this.props.history.replace(`/new/community?id=${community.id}`);
     return this.step('next');
@@ -182,71 +181,65 @@ class NewCommunity extends React.Component<Props, State> {
             noComposer
           />
 
-          <Column type="primary">
-            <Container bg={activeStep === 3 ? 'onboarding' : null} repeat>
-              <Stepper activeStep={activeStep} />
-              <Title centered={activeStep === 3}>{title}</Title>
-              <Description centered={activeStep === 3}>
-                {description}
-              </Description>
+          <Container bg={activeStep === 3 ? 'onboarding' : null} repeat>
+            <Stepper activeStep={activeStep} />
+            <Title>{title}</Title>
+            <Description>{description}</Description>
 
-              {// gather community meta info
-              activeStep === 1 &&
-                !community && (
-                  <CreateCommunityForm
-                    communityCreated={this.communityCreated}
-                  />
-                )}
-
-              {activeStep === 1 &&
-                community && (
-                  <EditCommunityForm
-                    communityUpdated={this.communityCreated}
-                    community={community}
-                  />
-                )}
-
-              {activeStep === 2 &&
-                community &&
-                community.id && (
-                  <ContentContainer data-cy="community-creation-invitation-step">
-                    <Divider />
-                    <SlackConnection
-                      isOnboarding={true}
-                      id={community.id || existingId}
-                    />
-                    <Divider />
-                    <CommunityInvitationForm id={community.id} />
-                  </ContentContainer>
-                )}
-
-              {// connect a slack team or invite via email
-              activeStep === 2 && (
-                <Actions>
-                  <TextButton onClick={() => this.step('previous')}>
-                    Back
-                  </TextButton>
-                  {hasInvitedPeople ? (
-                    <Button onClick={() => this.step('next')}>Continue</Button>
-                  ) : (
-                    <TextButton
-                      color={'brand.default'}
-                      onClick={() => this.step('next')}
-                    >
-                      Skip this step
-                    </TextButton>
-                  )}
-                </Actions>
+            {// gather community meta info
+            activeStep === 1 &&
+              !community && (
+                <CreateCommunityForm communityCreated={this.communityCreated} />
               )}
 
-              {// share the community
-              activeStep === 3 && (
-                <ContentContainer>
-                  <Share community={community} onboarding={true} />
+            {activeStep === 1 &&
+              community && (
+                <EditCommunityForm
+                  communityUpdated={this.communityCreated}
+                  community={community}
+                />
+              )}
+
+            {activeStep === 2 &&
+              community &&
+              community.id && (
+                <ContentContainer data-cy="community-creation-invitation-step">
+                  <Divider />
+                  <SlackConnection
+                    isOnboarding={true}
+                    id={community.id || existingId}
+                  />
+                  <Divider />
+                  <CommunityInvitationForm id={community.id} />
                 </ContentContainer>
               )}
-            </Container>
-          </Column>
+
+            {// connect a slack team or invite via email
+            activeStep === 2 && (
+              <Actions>
+                <TextButton onClick={() => this.step('previous')}>
+                  Back
+                </TextButton>
+                {hasInvitedPeople ? (
+                  <Button onClick={() => this.step('next')}>Continue</Button>
+                ) : (
+                  <TextButton
+                    color={'brand.default'}
+                    onClick={() => this.step('next')}
+                  >
+                    Skip this step
+                  </TextButton>
+                )}
+              </Actions>
+            )}
+
+            {// share the community
+            activeStep === 3 && (
+              <ContentContainer>
+                <Share community={community} onboarding={true} />
+              </ContentContainer>
+            )}
+          </Container>
         </AppViewWrapper>
       );
     }
@@ -261,23 +254,21 @@ class NewCommunity extends React.Component<Props, State> {
             noComposer
           />
 
-          <Column type="primary">
-            <Container bg={null}>
-              <Title>
-                {user.pendingEmail ? 'Confirm' : 'Add'} Your Email Address
-              </Title>
-              <Description>
-                Before creating a community, please{' '}
-                {user.pendingEmail ? 'confirm' : 'add'} your email address. This
-                email address will be used in the future to send you updates
-                about your community, including moderation events.
-              </Description>
+          <Container bg={null}>
+            <Title>
+              {user.pendingEmail ? 'Confirm' : 'Add'} Your Email Address
+            </Title>
+            <Description>
+              Before creating a community, please{' '}
+              {user.pendingEmail ? 'confirm' : 'add'} your email address. This
+              email address will be used in the future to send you updates about
+              your community, including moderation events.
+            </Description>
 
-              <div style={{ padding: '0 24px 24px' }}>
-                <UserEmailConfirmation user={user} />
-              </div>
-            </Container>
-          </Column>
+            <div style={{ padding: '0 24px 24px' }}>
+              <UserEmailConfirmation user={user} />
+            </div>
+          </Container>
         </AppViewWrapper>
       );
     }

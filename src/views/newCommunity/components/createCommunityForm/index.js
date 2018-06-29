@@ -1,20 +1,17 @@
 // @flow
 import * as React from 'react';
-import Link from 'src/components/link';
 import { connect } from 'react-redux';
 import compose from 'recompose/compose';
 import { withRouter } from 'react-router';
 import slugg from 'slugg';
 import { withApollo } from 'react-apollo';
 import { Notice } from '../../../../components/listItems/style';
-import Avatar from '../../../../components/avatar';
 import { throttle } from '../../../../helpers/utils';
 import { addToastWithTimeout } from '../../../../actions/toasts';
 import { COMMUNITY_SLUG_BLACKLIST } from 'shared/slug-blacklists';
 import createCommunityMutation from 'shared/graphql/mutations/community/createCommunity';
 import type { CreateCommunityType } from 'shared/graphql/mutations/community/createCommunity';
 import { getCommunityBySlugQuery } from 'shared/graphql/queries/community/getCommunity';
-import { searchCommunitiesQuery } from 'shared/graphql/queries/search/searchCommunities';
 import { Button } from '../../../../components/buttons';
 import {
   Input,
@@ -24,13 +21,12 @@ import {
   CoverInput,
   Error,
   Checkbox,
+  Label,
 } from '../../../../components/formElements';
 import {
   ImageInputWrapper,
+  ProfileInputWrapper,
   Spacer,
-  CommunitySuggestionsWrapper,
-  CommunitySuggestion,
-  CommunitySuggestionsText,
   PrivacySelector,
   PrivacyOption,
   PrivacyOptionLabel,
@@ -57,7 +53,6 @@ type State = {
   isLoading: boolean,
   agreeCoC: boolean,
   photoSizeError: boolean,
-  communitySuggestions: ?Array<Object>,
   isPrivate: boolean,
 };
 
@@ -89,7 +84,6 @@ class CreateCommunityForm extends React.Component<Props, State> {
       isLoading: false,
       agreeCoC: false,
       photoSizeError: false,
-      communitySuggestions: null,
       isPrivate: false,
     };
 
@@ -101,13 +95,6 @@ class CreateCommunityForm extends React.Component<Props, State> {
   }
 
   changeName = e => {
-    const { communitySuggestions } = this.state;
-    if (communitySuggestions) {
-      this.setState({
-        communitySuggestions: null,
-      });
-    }
-
     const name = e.target.value;
     // replace any non alpha-num characters to prevent bad community slugs
     // (/[\W_]/g, "-") => replace non-alphanum with hyphens
@@ -213,59 +200,6 @@ class CreateCommunityForm extends React.Component<Props, State> {
       .catch(err => {
         return this.props.dispatch(addToastWithTimeout('success', err.message));
       });
-  };
-
-  checkSuggestedCommunities = () => {
-    const { name, slug, slugError } = this.state;
-    if (name && name.length > 1 && slug && slug.length > 1 && !slugError) {
-      // if the user has found a valid url, do a community search to see if they might be creating a duplicate community
-      this.props.client
-        .query({
-          // TODO: @BRIAN SWITCH THIS AFTER SEARCH IS MERGED IN
-          query: searchCommunitiesQuery,
-          variables: {
-            queryString: slug,
-            type: 'COMMUNITIES',
-          },
-        })
-        .then(({ data: { search } }) => {
-          if (
-            !search ||
-            !search.searchResultsConnection ||
-            search.searchResultsConnection.edges.length === 0
-          ) {
-            return this.setState({
-              communitySuggestions: null,
-            });
-          }
-
-          const communitySuggestions = search.searchResultsConnection.edges.map(
-            c => c.node
-          );
-
-          const filtered =
-            communitySuggestions &&
-            communitySuggestions
-              .slice()
-              .sort((a, b) => b.metaData.members - a.metaData.members)
-              .slice(0, 5);
-
-          if (filtered && filtered.length > 0) {
-            return this.setState({
-              communitySuggestions: filtered,
-            });
-          } else {
-            return this.setState({
-              communitySuggestions: null,
-            });
-          }
-        })
-        .catch(err => {
-          return this.props.dispatch(
-            addToastWithTimeout('success', err.message)
-          );
-        });
-    }
   };
 
   changeDescription = e => {
@@ -450,15 +384,8 @@ class CreateCommunityForm extends React.Component<Props, State> {
       isLoading,
       agreeCoC,
       photoSizeError,
-      communitySuggestions,
       isPrivate,
     } = this.state;
-
-    const suggestionString = slugTaken
-      ? communitySuggestions && communitySuggestions.length > 0
-        ? 'Were you looking for one of these communities?'
-        : null
-      : "This community name and url are available! We also found communities that might be similar to what you're trying to create, just in case you would rather join an existing community instead!";
 
     return (
       <FormContainer data-cy="create-community-form">
@@ -470,7 +397,10 @@ class CreateCommunityForm extends React.Component<Props, State> {
               preview={true}
               allowGif
             />
+          </ImageInputWrapper>
 
+          <ProfileInputWrapper>
+            <Label>Add a community logo</Label>
             <PhotoInput
               onChange={this.setCommunityPhoto}
               defaultValue={image}
@@ -478,7 +408,7 @@ class CreateCommunityForm extends React.Component<Props, State> {
               community
               allowGif
             />
-          </ImageInputWrapper>
+          </ProfileInputWrapper>
 
           {photoSizeError && (
             <Notice style={{ marginTop: '32px' }}>
@@ -492,7 +422,6 @@ class CreateCommunityForm extends React.Component<Props, State> {
             defaultValue={name}
             onChange={this.changeName}
             autoFocus={!window.innerWidth < 768}
-            onBlur={this.checkSuggestedCommunities}
             dataCy="community-name-input"
           >
             What is your community called?
@@ -505,7 +434,6 @@ class CreateCommunityForm extends React.Component<Props, State> {
           <UnderlineInput
             defaultValue={slug}
             onChange={this.changeSlug}
-            onBlur={this.checkSuggestedCommunities}
             dataCy="community-slug-input"
           >
             spectrum.chat/
@@ -519,39 +447,6 @@ class CreateCommunityForm extends React.Component<Props, State> {
           )}
 
           {slugError && <Error>Slugs can be up to 24 characters long.</Error>}
-
-          {suggestionString &&
-            !nameError &&
-            !slugError &&
-            communitySuggestions &&
-            communitySuggestions.length > 0 && (
-              <CommunitySuggestionsText>
-                {suggestionString}
-              </CommunitySuggestionsText>
-            )}
-
-          <CommunitySuggestionsWrapper>
-            {!nameError &&
-              !slugError &&
-              communitySuggestions &&
-              communitySuggestions.length > 0 &&
-              communitySuggestions.map(suggestion => {
-                return (
-                  <Link to={`/${suggestion.slug}`} key={suggestion.id}>
-                    <CommunitySuggestion>
-                      <Avatar
-                        size={'20'}
-                        radius={4}
-                        community={suggestion}
-                        src={suggestion.profilePhoto}
-                      />
-                      <strong>{suggestion.name}</strong>{' '}
-                      {suggestion.metaData.members.toLocaleString()} members
-                    </CommunitySuggestion>
-                  </Link>
-                );
-              })}
-          </CommunitySuggestionsWrapper>
 
           <TextArea
             defaultValue={description}

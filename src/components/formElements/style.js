@@ -278,7 +278,7 @@ export const InputOverlay = styled.div`
   background-color: ${({ theme }) => hexa(theme.bg.reverse, 0.6)};
   padding: 8px;
   border-radius: ${props => (props.user ? '100%' : '8px')};
-  opacity: 0;
+  opacity: ${props => (props.visible ? '1' : '0')};
   transition: ${Transition.hover.off};
 
   &:hover {

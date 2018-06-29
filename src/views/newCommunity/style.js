@@ -1,47 +1,39 @@
 // @flow
-// $FlowFixMe
 import styled from 'styled-components';
-import Card from '../../components/card';
 
-export const Container = styled(Card)`
-  background-image: ${props =>
-    props.bg ? `url('/img/fills/${props.bg}.svg')` : 'none'};
-  background-color: #fff;
-  background-size: 110% auto;
-  background-repeat: ${props => (props.repeat ? 'repeat-y' : 'no-repeat')};
-  background-position: ${props =>
-    props.repeat ? 'center top' : 'center center'};
-  width: 100%;
+export const Container = styled.div`
   height: auto;
   min-height: 160px;
   display: flex;
+  flex-direction: column;
+  max-width: 90%;
+  padding: 32px;
 `;
 
 export const Actions = styled.div`
+  width: calc(100% + 16px);
+  margin-left: -8px;
+  margin-right: -8px;
   display: flex;
   justify-content: space-between;
-  border-top: 2px solid ${props => props.theme.bg.border};
-  padding: 24px;
-  background: #fff;
-  border-radius: 0 0 12px 12px;
+  border-top: 1px solid ${props => props.theme.bg.border};
+  padding: 20px 20px 12px;
 `;
 
 export const Title = styled.h1`
-  font-weight: 900;
+  font-weight: 700;
   color: ${props => props.theme.text.default};
-  font-size: 24px;
+  font-size: 32px;
   letter-spacing: -0.1px;
-  padding: 24px 24px 8px;
-  text-align: ${props => (props.centered ? 'center' : 'left')};
 `;
 
 export const Description = styled.h3`
-  font-size: 16px;
-  font-weight: 500;
-  color: ${props => props.theme.text.alt};
+  font-size: 20px;
+  font-weight: 400;
+  color: ${props => props.theme.text.secondary};
   line-height: 1.4;
-  padding: 8px 24px 16px;
-  text-align: ${props => (props.centered ? 'center' : 'left')};
+  margin-top: 16px;
+  max-width: 640px;
 `;
 
 export const Divider = styled.div`
@@ -56,7 +48,13 @@ export const ContentContainer = styled.div`
   padding: 0 24px 24px;
 `;
 
-export const FormContainer = styled.div``;
+export const FormContainer = styled.div`
+  background: ${props => props.theme.bg.default};
+  border: 1px solid ${props => props.theme.bg.border};
+  padding: 8px;
+  border-radius: 8px;
+  margin-top: 32px;
+`;
 
 export const Form = styled.form`
   display: block;

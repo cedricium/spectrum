@@ -55,7 +55,7 @@ export const Input = (props: InputProps) => {
 export const PhotoInput = (props: InputProps) => {
   return (
     <PhotoInputLabel user={props.user} size={props.size || 48}>
-      <InputOverlay user={props.user}>
+      <InputOverlay user={props.user} visible={props.defaultValue.length === 0}>
         <Icon glyph="photo" />
       </InputOverlay>
       <Avatar
@@ -83,7 +83,7 @@ export const PhotoInput = (props: InputProps) => {
 export const CoverInput = (props: InputProps) => {
   return (
     <CoverInputLabel>
-      <InputOverlay>
+      <InputOverlay visible={props.defaultValue.length === 0}>
         <FauxOutlineButton
           color={'bg.default'}
           hoverColor={'bg.default'}
@@ -176,4 +176,8 @@ export const Error = (props: Object) => {
 
 export const Success = (props: Object) => {
   return <StyledSuccess data-cy={props.dataCy}>{props.children}</StyledSuccess>;
+};
+
+export const Label = (props: Object) => {
+  return <StyledLabel>{props.children}</StyledLabel>;
 };

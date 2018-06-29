@@ -7,12 +7,12 @@ export const Container = styled.div`
   display: flex;
   justify-content: space-between;
   position: relative;
-  padding: 24px;
+  margin-bottom: 32px;
 `;
 
 export const Line = styled.span`
   position: absolute;
-  height: 2px;
+  height: 1px;
   background: ${props => props.theme.bg.border};
   top: 50%;
   left: 24px;
@@ -27,7 +27,6 @@ export const Step = styled.div`
   font-size: 16px;
   color: ${props =>
     props.active ? props.theme.brand.default : props.theme.text.alt};
-  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,8 +34,9 @@ export const Step = styled.div`
   border: 2px solid
     ${props =>
       props.active ? props.theme.brand.default : props.theme.bg.border};
-  box-shadow: 0 0 0 4px #fff;
   font-weight: 700;
+  background: ${props =>
+    props.active ? props.theme.bg.default : props.theme.bg.wash};
   z-index: ${zIndex.base + 1};
   position: relative;
 `;
