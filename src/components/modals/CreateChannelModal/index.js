@@ -7,9 +7,9 @@ import { withRouter } from 'react-router';
 import slugg from 'slugg';
 import { CHANNEL_SLUG_BLACKLIST } from 'shared/slug-blacklists';
 import { withApollo } from 'react-apollo';
-import { closeModal } from '../../../actions/modals';
-import { addToastWithTimeout } from '../../../actions/toasts';
-import { throttle } from '../../../helpers/utils';
+import { closeModal } from 'src/actions/modals';
+import { addToastWithTimeout } from 'src/actions/toasts';
+import { throttle } from 'src/helpers/utils';
 import { getChannelBySlugAndCommunitySlugQuery } from 'shared/graphql/queries/channel/getChannel';
 import type { GetChannelType } from 'shared/graphql/queries/channel/getChannel';
 import type { GetCommunityType } from 'shared/graphql/queries/community/getCommunity';
@@ -29,17 +29,22 @@ import {
 } from '../../formElements';
 import { Form, Actions } from './style';
 
+const MAX_SLUG_LENGTH = 24;
+const MAX_NAME_LENGTH = 20;
+const MAX_DESCRIPTION_LENGTH = 140;
+
 type State = {
   name: string,
+  nameError: ?string,
   slug: string,
+  slugError: ?string,
   description: string,
+  descriptionError: ?string,
   isPrivate: boolean,
-  slugTaken: boolean,
-  slugError: boolean,
-  descriptionError: boolean,
-  nameError: boolean,
-  createError: boolean,
-  loading: boolean,
+  addExistingMembers: boolean,
+  permissionSetting: 'members' | 'team',
+  isCreating: boolean,
+  createError: ?string,
 };
 
 type Props = {
@@ -56,15 +61,16 @@ class CreateChannelModal extends React.Component<Props, State> {
 
     this.state = {
       name: '',
+      nameError: '',
       slug: '',
+      slugError: '',
       description: '',
+      descriptionError: '',
       isPrivate: false,
-      slugTaken: false,
-      slugError: false,
-      descriptionError: false,
-      nameError: false,
-      createError: false,
-      loading: false,
+      addExistingMembers: true,
+      permissionSetting: 'members',
+      isCreating: false,
+      createError: '',
     };
 
     this.checkSlug = throttle(this.checkSlug, 500);
@@ -83,51 +89,41 @@ class CreateChannelModal extends React.Component<Props, State> {
 
   changeName = e => {
     const name = e.target.value;
-    let lowercaseName = name.toLowerCase().trim();
-    let slug = slugg(lowercaseName);
+    const lowercaseName = name.toLowerCase().trim();
+    const slug = slugg(lowercaseName);
 
-    if (name.length >= 20) {
-      this.setState({
-        nameError: true,
+    if (name.length > MAX_NAME_LENGTH) {
+      return this.setState({
+        nameError: 'Channel names can be up to 20 characters long.',
       });
-
-      return;
     }
 
     this.setState({
       name,
       slug,
-      nameError: false,
+      nameError: '',
     });
 
-    // $FlowIssue
-    this.checkSlug(slug);
+    // $FlowFixMe
+    return this.checkSlug(slug);
   };
 
-  changeSlug = e => {
-    let slug = e.target.value;
-    let lowercaseSlug = slug.toLowerCase().trim();
-    slug = slugg(lowercaseSlug);
+  changeSlug = (val: string) => {
+    const lowercaseSlug = val.toLowerCase().trim();
+    const slug = slugg(lowercaseSlug);
 
-    if (slug.length >= 24) {
+    if (slug.length > MAX_SLUG_LENGTH) {
       return this.setState({
-        slugError: true,
-      });
-    }
-
-    if (CHANNEL_SLUG_BLACKLIST.indexOf(slug) > -1) {
-      return this.setState({
-        slug,
-        slugTaken: true,
+        slugError: 'Channel slugs can be up to 24 characters long.',
       });
     }
 
     this.setState({
       slug,
-      slugError: false,
+      slugError: '',
     });
 
-    // $FlowIssue
+    // $FlowFixMe
     this.checkSlug(slug);
   };
 
@@ -137,72 +133,89 @@ class CreateChannelModal extends React.Component<Props, State> {
     if (CHANNEL_SLUG_BLACKLIST.indexOf(slug) > -1) {
       return this.setState({
         slug,
-        slugTaken: true,
+        slugError: 'That channel slug is already taken.',
       });
-    } else {
-      // check the db to see if this channel slug exists
-      this.props.client
-        .query({
-          query: getChannelBySlugAndCommunitySlugQuery,
-          variables: {
-            channelSlug: slug,
-            communitySlug,
-          },
-        })
-        .then(({ data }: { data: { channel: GetChannelType } }) => {
-          if (CHANNEL_SLUG_BLACKLIST.indexOf(this.state.slug) > -1) {
-            return this.setState({
-              slugTaken: true,
-            });
-          }
+    }
 
-          if (!data.loading && data && data.channel && data.channel.id) {
-            return this.setState({
-              slugTaken: true,
-            });
-          } else {
-            return this.setState({
-              slugTaken: false,
-            });
-          }
-        })
-        .catch(err => {
-          // do nothing
+    // check the db to see if this channel slug exists
+    this.props.client
+      .query({
+        query: getChannelBySlugAndCommunitySlugQuery,
+        variables: {
+          channelSlug: slug,
+          communitySlug,
+        },
+      })
+      .then(({ data }: { data: { channel: GetChannelType } }) => {
+        if (CHANNEL_SLUG_BLACKLIST.indexOf(this.state.slug) > -1) {
+          return this.setState({
+            slugError: 'That channel slug is already taken.',
+          });
+        }
+
+        if (!data.loading && data && data.channel && data.channel.id) {
+          return this.setState({
+            slugError: 'That channel slug is already taken.',
+          });
+        }
+
+        return this.setState({
+          slugError: '',
         });
-    }
-  };
-
-  changeDescription = e => {
-    const description = e.target.value;
-    if (description.length >= 140) {
-      this.setState({
-        descriptionError: true,
+      })
+      .catch(err => {
+        // do nothing
       });
-      return;
+  };
+
+  changeDescription = (description: string) => {
+    if (description.length > MAX_DESCRIPTION_LENGTH) {
+      return this.setState({
+        descriptionError: 'Oops, that’s more than 140 characters.',
+      });
     }
 
-    this.setState({
+    return this.setState({
       description,
-      descriptionError: false,
+      descriptionError: '',
     });
   };
 
-  changePrivate = e => {
-    const value = e.target.checked;
+  togglePrivate = () => {
+    this.setState(state => ({
+      isPrivate: !state.isPrivate,
+      /*
+        If the user has already set addExistingMembers to false, then we don't need to 
+        toggle its value if the user also changes the private state. However, if the setting
+        to add existing members is enabled, it must be disabled if the user changes the privacy
+        of the channel to private.
+      */
+      addExistingMembers: !state.addExistingMembers
+        ? !state.isPrivate
+        : state.addExistingMembers,
+    }));
+  };
 
+  toggleAddExistingMembers = () => {
+    this.setState(state => ({
+      addExistingMembers: !state.addExistingMembers,
+    }));
+  };
+
+  setPermissionSettings = (val: 'members' | 'team') => {
     this.setState({
-      isPrivate: value,
+      permissionSetting: val,
     });
   };
 
-  create = e => {
+  create = (e: any) => {
     e.preventDefault();
+
     const {
       name,
       slug,
       description,
       isPrivate,
-      slugTaken,
       slugError,
       nameError,
       descriptionError,
@@ -210,9 +223,9 @@ class CreateChannelModal extends React.Component<Props, State> {
     const { community } = this.props;
 
     // if an error is present, ensure the client cant submit the form
-    if (slugTaken || nameError || descriptionError || slugError) {
+    if (nameError || descriptionError || slugError) {
       this.setState({
-        createError: true,
+        createError: 'Please fix any errors above before creating.',
       });
 
       return;
@@ -220,8 +233,8 @@ class CreateChannelModal extends React.Component<Props, State> {
 
     // clientside checks have passed
     this.setState({
-      createError: false,
-      loading: true,
+      createError: '',
+      isCreating: true,
     });
 
     // all non-private channels should be set to default for now
@@ -248,7 +261,7 @@ class CreateChannelModal extends React.Component<Props, State> {
       })
       .catch(err => {
         this.setState({
-          loading: false,
+          isCreating: false,
         });
 
         this.props.dispatch(addToastWithTimeout('error', err.toString()));
@@ -260,18 +273,20 @@ class CreateChannelModal extends React.Component<Props, State> {
 
     const {
       name,
-      slug,
-      description,
-      isPrivate,
-      slugTaken,
-      slugError,
       nameError,
+      slug,
+      slugError,
+      description,
       descriptionError,
+      isPrivate,
+      addExistingMembers,
+      permissionSetting,
+      isCreating,
       createError,
-      loading,
     } = this.state;
 
-    const styles = modalStyles(420);
+    const submittable =
+      name && !nameError && !slugError && (description && !descriptionError);
 
     return (
       <Modal
@@ -281,17 +296,12 @@ class CreateChannelModal extends React.Component<Props, State> {
         contentLabel={'Create a Channel'}
         onRequestClose={this.close}
         shouldCloseOnOverlayClick={true}
-        style={styles}
+        style={modalStyles(420)}
         closeTimeoutMS={330}
       >
-        {/*
-          We pass the closeModal dispatch into the container to attach
-          the action to the 'close' icon in the top right corner of all modals
-        */}
         <ModalContainer title={'Create a Channel'} closeModal={this.close}>
           <Form>
             <Input
-              id="name"
               defaultValue={name}
               onChange={this.changeName}
               autoFocus={true}
@@ -299,41 +309,29 @@ class CreateChannelModal extends React.Component<Props, State> {
               Channel Name
             </Input>
 
-            {nameError && (
-              <Error>Channel names can be up to 20 characters long.</Error>
-            )}
+            {nameError && <Error>{nameError}</Error>}
 
-            <UnderlineInput defaultValue={slug} onChange={this.changeSlug}>
+            <UnderlineInput
+              defaultValue={slug}
+              onChange={e => this.changeSlug(e.target.value)}
+            >
               {`/${community.slug}/`}
             </UnderlineInput>
 
-            {slugTaken && (
-              <Error>
-                This url is already taken - feel free to change it if you’re set
-                on the name {name}!
-              </Error>
-            )}
-
-            {slugError && <Error>Slugs can be up to 24 characters long.</Error>}
+            {slugError && <Error>{slugError}</Error>}
 
             <TextArea
-              id="slug"
               defaultValue={description}
-              onChange={this.changeDescription}
+              onChange={e => this.changeDescription(e.target.value)}
             >
-              Describe it in 140 characters or less
+              Add optional description (140 characters)
             </TextArea>
 
-            {descriptionError && (
-              <Error>
-                Oop, that’s more than 140 characters - try trimming that up.
-              </Error>
-            )}
+            {descriptionError && <Error>{descriptionError}</Error>}
 
             <Checkbox
-              id="isPrivate"
               checked={isPrivate}
-              onChange={this.changePrivate}
+              onChange={this.togglePrivate}
               dataCy="create-channel-modal-toggle-private-checkbox"
             >
               Private channel
@@ -344,24 +342,58 @@ class CreateChannelModal extends React.Component<Props, State> {
               new members must be manually approved.
             </UpsellDescription>
 
+            {!isPrivate && (
+              <React.Fragment>
+                <Checkbox
+                  checked={addExistingMembers}
+                  onChange={this.toggleAddExistingMembers}
+                  dataCy="create-channel-modal-toggle-add-existing-members-checkbox"
+                >
+                  Add current members to new channel
+                </Checkbox>
+
+                <UpsellDescription>
+                  Automatically add all existing community members as
+                  subscribers to your newly created channel.
+                </UpsellDescription>
+
+                <Checkbox
+                  checked={permissionSetting === 'members'}
+                  onChange={() => this.setPermissionSettings('members')}
+                  dataCy="create-channel-modal-toggle-members-permission-setting-checkbox"
+                >
+                  All community members
+                </Checkbox>
+
+                <Checkbox
+                  checked={permissionSetting === 'team'}
+                  onChange={() => this.setPermissionSettings('team')}
+                  dataCy="create-channel-modal-toggle-team-permission-setting-checkbox"
+                >
+                  Only team members
+                </Checkbox>
+
+                <UpsellDescription>
+                  Who should be allowed to create new conversations in this
+                  channel?
+                </UpsellDescription>
+              </React.Fragment>
+            )}
+
             <Actions>
               <TextButton onClick={this.close} color={'warn.alt'}>
                 Cancel
               </TextButton>
               <Button
-                disabled={!name || !slug || slugTaken || !description}
-                loading={loading}
+                disabled={!submittable}
+                loading={isCreating}
                 onClick={this.create}
               >
-                Create Channel
+                Create
               </Button>
             </Actions>
 
-            {createError && (
-              <Error>
-                Please fix any errors above before creating this community.
-              </Error>
-            )}
+            {createError && <Error>{createError}</Error>}
           </Form>
         </ModalContainer>
       </Modal>
