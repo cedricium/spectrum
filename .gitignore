@@ -37,3 +37,4 @@ public/uploads
 cypress/screenshots/
 cypress/videos/
 cacert
+newrelic_agent.log

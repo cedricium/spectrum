@@ -2,6 +2,7 @@
 /**
  * The entry point for the server, this is where everything starts
  */
+require('newrelic');
 const compression = require('compression');
 const debug = require('debug')('api');
 debug('Server starting...');
@@ -99,3 +100,4 @@ process.on('uncaughtException', async err => {
     process.exit(1);
   }
 });
+//
